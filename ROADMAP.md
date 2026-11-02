@@ -418,3 +418,9 @@ por su lado:
 > el mismo daño que un falso negativo, sólo que por la vía del lector.
 > Cuando se caracterice un conjunto de hallazgos ajenos, **contarlos con
 > el motor y triar el resto uno por uno** antes de llamarlo ruido.
+
+## garita#2 — Reemplazo de Secret Protection
+
+- [x] Ampliar formatos de proveedor con fronteras y negativos realistas,
+  conservar los ejemplos de documentación, medir contra gitleaks y documentar
+  cobertura, límites, historial y plantillas de adopción en CI y pre-commit.

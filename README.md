@@ -500,3 +500,47 @@ IMSS; las fuentes están en `docs/IDENTIFICADORES.md`.
 
 MIT © 2026 Oscar Pacheco ([proscar87](https://github.com/proscar87)).
 Úsalo, cámbialo, véndelo.
+
+## Garita como reemplazo de Secret Protection
+
+Garita permite bloquear credenciales antes del commit con pre-commit y revisar
+el repositorio en CI. Cubre formatos de AWS, Azure, Google, GitHub, GitLab,
+Slack (tokens y webhooks), Stripe, Twilio, SendGrid, OpenAI, Anthropic,
+Supabase, npm, DigitalOcean, Shopify, PyPI, Hugging Face, Vault, age,
+Databricks, Doppler, Linear, Notion, Postman, Pulumi, Sentry, Grafana,
+PlanetScale y Heroku. También detecta URLs con credenciales, asignaciones
+sospechosas y llaves privadas PEM con cuerpo. La cobertura depende del formato:
+no todas las credenciales de cada proveedor tienen una firma reconocible.
+Consulta la [medición de cobertura](docs/COBERTURA_SECRETOS.md).
+
+El modo existente `garita --historial` revisa los blobs únicos del historial
+alcanzable y distingue lo que sigue vivo de lo que sólo queda en commits
+anteriores. Para revisar todo el historial disponible en CI, haz checkout
+con `fetch-depth: 0`.
+
+Garita no revoca credenciales automáticamente con el proveedor, no verifica
+si una llave es válida y no reproduce el catálogo completo de patrones de
+socios de GitHub Secret Protection. Tampoco instala una barrera en el servidor
+de GitHub: el hook local se puede omitir y el CI corre después de la subida.
+Ante una filtración, rota primero la credencial y después limpia el archivo.
+
+Adopción: copia el [workflow mínimo](docs/adopcion/garita.yml) a
+`.github/workflows/garita.yml` y el [bloque de pre-commit](docs/adopcion/pre-commit-config.yaml)
+a `.pre-commit-config.yaml`; actualiza el tag indicado e instala el hook con
+`pre-commit install`. Garita usa Python stdlib; pre-commit es una herramienta
+opcional de integración.
+
+Combina estos controles con un job nocturno (`schedule`, por ejemplo
+`cron: '0 3 * * *'`) que haga checkout con `fetch-depth: 0` y ejecute una
+versión fijada de gitleaks instalada en el runner:
+
+```bash
+gitleaks git . --log-opts="--all" --redact --report-format sarif --report-path gitleaks.sarif
+garita --historial --formato html --salida garita-historial.html
+```
+
+Ejecuta ambos pasos y conserva los reportes incluso cuando el escaneo encuentre
+problemas (en GitHub Actions, `if: always()` en el paso de subida de artefactos).
+En repositorios **privados sin Advanced Security**, la subida SARIF a code
+scanning no está disponible: usa el log o el reporte HTML como artefacto del
+workflow. El workflow mínimo sólo necesita `permissions: contents: read`.

@@ -1,0 +1,11 @@
+# Copia este archivo a .github/workflows/garita.yml.
+name: Garita
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: proscar87/garita@v1

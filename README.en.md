@@ -94,3 +94,46 @@ reason left blank for you to fill in.
 Config, findings format and design rationale: see the
 [Spanish README](https://github.com/proscar87/garita/blob/main/README.md) and [`docs/DISENO.md`](https://github.com/proscar87/garita/blob/main/docs/DISENO.md). Built with
 [Claude Code](https://claude.com/claude-code). MIT.
+
+## Garita as a Secret Protection replacement
+
+Garita can block credentials before a commit with pre-commit and scan the
+repository in CI. It covers formats from AWS, Azure, Google, GitHub, GitLab,
+Slack (tokens and webhooks), Stripe, Twilio, SendGrid, OpenAI, Anthropic,
+Supabase, npm, DigitalOcean, Shopify, PyPI, Hugging Face, Vault, age,
+Databricks, Doppler, Linear, Notion, Postman, Pulumi, Sentry, Grafana,
+PlanetScale and Heroku. It also detects URLs with credentials, suspicious
+assignments and PEM private keys with a body. Coverage depends on the format:
+not every credential from each provider has a recognizable signature.
+See the [coverage measurement](docs/COBERTURA_SECRETOS.md).
+
+The existing `garita --historial` mode scans unique blobs in reachable history
+and distinguishes current findings from those only present in older commits.
+To scan all available history in CI, check out with `fetch-depth: 0`.
+
+Garita does not automatically revoke credentials with the provider, verify
+whether a key is valid, or reproduce GitHub Secret Protection's full catalog
+of partner patterns. It does not install a barrier on GitHub's server:
+the local hook can be skipped and CI runs after the upload. After a leak,
+rotate the credential first, then clean up the file.
+
+To adopt it, copy the [minimal workflow](docs/adopcion/garita.yml) to
+`.github/workflows/garita.yml` and the [pre-commit block](docs/adopcion/pre-commit-config.yaml)
+to `.pre-commit-config.yaml`; update the indicated tag and install the hook
+with `pre-commit install`. Garita uses the Python standard library;
+pre-commit is an optional integration tool.
+
+Combine these controls with a nightly job (`schedule`, for example
+`cron: '0 3 * * *'`) that checks out with `fetch-depth: 0` and runs a pinned
+version of gitleaks installed on the runner:
+
+```bash
+gitleaks git . --log-opts="--all" --redact --report-format sarif --report-path gitleaks.sarif
+garita --historial --formato html --salida garita-historial.html
+```
+
+Run both steps and retain reports even when a scan finds problems (in GitHub
+Actions, use `if: always()` on the artifact upload step). In **private
+repositories without Advanced Security**, SARIF uploads to code scanning are
+unavailable: use the log or the HTML report as a workflow artifact. The minimal
+workflow only needs `permissions: contents: read`.
