@@ -87,14 +87,50 @@ PATRONES: list[tuple[str, re.Pattern[str], str, str]] = [
             r"|gh[opsur]_[A-Za-z0-9]{36,}"
             r"|github_pat_[A-Za-z0-9_]{22,}"      # GitHub fine-grained
             r"|npm_[A-Za-z0-9]{36}"               # npm granular
-            r"|AKIA[0-9A-Z]{16}"                  # AWS
+            r"|(?:AKIA|ASIA|ABIA|ACCA|A3T[A-Z0-9])[0-9A-Z]{16}"  # AWS: IDs y sesiones
             r"|AIza[0-9A-Za-z_-]{35}"             # Google
             r"|xox[baprs]-[A-Za-z0-9-]{10,}"      # Slack
             r"|glpat-[A-Za-z0-9_-]{20}"           # GitLab
             r")\b"
+            r"|(?<![A-Za-z0-9_~.\-])[A-Za-z0-9_~.]{3}\dQ~[A-Za-z0-9_~.-]{31,34}(?![A-Za-z0-9_~.\-])"  # Azure AD: firma Q~ y longitud propia
+            r"|(?<![A-Za-z0-9_\-])xapp-\d-[A-Z0-9]+-\d+-[a-z0-9]+(?![A-Za-z0-9_\-])"  # Slack: token de aplicación
+            r"|(?<![\w])SK[0-9a-fA-F]{32}(?![\w])"  # Twilio: prefijo y 32 hexadecimales, no un SKU
+            r"|(?<![A-Za-z0-9_.\-])SG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}(?![A-Za-z0-9_.\-])"  # SendGrid: dos segmentos de tamaños propios
+            r"|(?<![\w])sbp_[a-f0-9]{40}(?![\w])"  # Supabase: token de acceso personal
+            r"|(?<![\w])do[opr]_v1_[a-f0-9]{64}(?![\w])"  # DigitalOcean: acceso, personal y refresh
+            r"|(?<![\w])shp(?:at|ca|pa|ss)_[a-fA-F0-9]{32}(?![\w])"  # Shopify: acceso y secretos de aplicaciones
+            r"|(?<![\w\-])pypi-AgEIcHlwaS5vcmc[\w-]{50,}(?![\w\-])"  # PyPI: cabecera distintiva de upload token
+            r"|(?<![\w])hf_[A-Za-z]{34}(?![\w])"  # Hugging Face: acceso con cuerpo alfabético
+            r"|(?<![\w.\-])hvs\.[\w-]{90,120}(?![\w.\-])"  # Vault: token de servicio moderno
+            r"|(?<![\w\-])AGE-SECRET-KEY-1[QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{58}(?![\w\-])"  # age: alfabeto Bech32 de la llave privada
+            r"|(?<![\w\-])dapi[a-f0-9]{32}(?:-\d)?(?![\w\-])"  # Databricks: token y sufijo opcional del proveedor
+            r"|(?<![\w.])dp\.pt\.[A-Za-z0-9]{43}(?![\w.])"  # Doppler: token personal
+            r"|(?<![\w])lin_api_[A-Za-z0-9]{40}(?![\w])"  # Linear: API key con prefijo propio
+            r"|(?<![\w])ntn_[0-9]{11}[A-Za-z0-9]{35}(?![\w])"  # Notion: once dígitos antes del cuerpo
+            r"|(?<![\w\-])PMAK-[a-f0-9]{24}-[a-f0-9]{34}(?![\w\-])"  # Postman: dos segmentos hexadecimales
+            r"|(?<![\w\-])pul-[a-f0-9]{40}(?![\w\-])"  # Pulumi: token de acceso
+            r"|(?<![\w])sntryu_[a-f0-9]{64}(?![\w])"  # Sentry: token de usuario
+            r"|(?<![\w])glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8}(?![\w])"  # Grafana: cuenta de servicio y checksum
+            r"|(?<![\w=.\-])pscale_(?:tkn|pw|oauth)_[\w=.-]{32,64}(?![\w=.\-])"  # PlanetScale: API, contraseña y OAuth
+            r"|(?<![\w\-])(?:gldt|glrt)-[A-Za-z0-9_-]{20}(?![\w\-])"  # GitLab: deploy y autenticación de runner
+            r"|(?<![\w\-])glptt-[a-f0-9]{40}(?![\w\-])"  # GitLab: trigger de pipeline
+            r"|(?<![\w.\-])glrt-t\d_[A-Za-z0-9_-]{27,300}\.[a-z0-9]{9}(?![\w.\-])"  # GitLab: runner enrutable
+            r"|(?<![\w\-])HRKU-AA[A-Za-z0-9_-]{58}(?![\w\-])"  # Heroku: API key v2
         ),
         "Es una credencial con formato reconocible de proveedor; quien "
         "rastrea repositorios busca exactamente estos prefijos.",
+        ARREGLO_LLAVE,
+    ),
+    (
+        "llave_azure",
+        re.compile(r"\b(?:AccountKey=[A-Za-z0-9+/]{86}==|SharedAccessKey=[A-Za-z0-9+/]{43}=)(?![A-Za-z0-9+/=])"),  # Azure: Storage y Service Bus requieren nombre y padding exactos
+        "Esta llave permite acceder al servicio de Azure.",
+        ARREGLO_LLAVE,
+    ),
+    (
+        "webhook_slack",
+        re.compile(r"https://hooks\.slack\.com/(?:services|workflows|triggers)/[A-Za-z0-9+/]{43,56}(?![A-Za-z0-9+/_-])"),  # Slack: URL secreta de services, workflows o triggers
+        "Esta URL permite publicar mensajes o activar flujos de Slack.",
         ARREGLO_LLAVE,
     ),
     (

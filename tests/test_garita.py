@@ -1566,10 +1566,6 @@ class DePuntaAPunta(unittest.TestCase):
             self.assertIn("acta.md", res.exentos_aplicados)
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
-
-
 class RegresionesDeCampo(unittest.TestCase):
     """Falsos positivos hallados corriendo Garita contra diez proyectos
     públicos reales (axios, Chart.js, express, faker, flask, hugo, prettier,
@@ -4507,3 +4503,43 @@ class UnEscaneoVacioNoEsUnaAprobacion(unittest.TestCase):
             codigo, salida = correr_garita(raiz, "--historial")
         self.assertEqual(codigo, 0, salida)
         self.assertIn("historial está limpio", salida)
+
+
+# Cuerpos sintéticos compartidos con la medición; ningún token completo literal.
+# Cada forma tiene un test propio: los subtests distinguen log y asignación.
+class CoberturaSecretProtection(unittest.TestCase):
+    def test_negativos_realistas(self):
+        for valor in ('a1b2c3d4' * 8, '3f2b8c1e-9d4a-4f6b-8e2a-1c7d5e9b0a42',
+                      'Ab9/' * 22, 'SKU-SK' + '01234567',
+                      'AKIA' + 'IOSFODNN7EXAMPLE'):
+            with self.subTest(valor=valor):
+                self.assertFalse(list(buscar('checksum = "' + valor + '"', 'x')))
+
+
+def _instalar_pruebas_cobertura():
+    import runpy
+    muestras = runpy.run_path(str(AQUI.parent / 'scripts' / 'cobertura_secretos.py'))
+
+    def crear(caso, positivo):
+        def prueba(self):
+            proveedor, tipo, valor, negativo = caso
+            for contexto, texto in muestras['contextos'](valor if positivo else negativo):
+                with self.subTest(proveedor=proveedor, tipo=tipo, contexto=contexto):
+                    # Sólo buscar: los avisos de asignación no deben ocultar regresiones.
+                    self.assertEqual(positivo, bool(list(buscar(texto, 'x'))))
+        return prueba
+
+    import re
+    for caso in muestras['muestras']():
+        nombre = re.sub(r'[^a-z0-9]+', '_', (caso[0] + '_' + caso[1]).lower()).strip('_')
+        for positivo in (True, False):
+            setattr(CoberturaSecretProtection,
+                    'test_' + nombre + ('_positivo' if positivo else '_negativo'),
+                    crear(caso, positivo))
+
+
+_instalar_pruebas_cobertura()
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
