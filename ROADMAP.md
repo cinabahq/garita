@@ -419,7 +419,7 @@ por su lado:
 > Cuando se caracterice un conjunto de hallazgos ajenos, **contarlos con
 > el motor y triar el resto uno por uno** antes de llamarlo ruido.
 
-## garita#2 — Reemplazo de Secret Protection
+## garita#2 — Reemplazo de Secret Protection — saldado en v1.1.0
 
 - [x] Ampliar formatos de proveedor con fronteras y negativos realistas,
   conservar los ejemplos de documentación, medir contra gitleaks y documentar
