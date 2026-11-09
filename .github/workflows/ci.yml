@@ -12,12 +12,15 @@ jobs:
       matrix:
         # 3.9 es el mínimo declarado; si se rompe ahí, la promesa del
         # pyproject es falsa y alguien lo va a descubrir instalándolo.
-        python: ["3.9", "3.12", "3.13"]
+        python: ["3.12", "3.13"]
         os: [ubuntu-latest]
         # Un SO por sabor alcanza para atrapar lo que se rompe fuera de
         # Linux (separadores de ruta en exenciones, fin de línea, git);
         # la matriz completa de 9 solo quema minutos.
         include:
+          # ubuntu-latest pasó a 26.04 y setup-python no trae 3.9 ahí
+          # (09-nov-2026): el mínimo se prueba en la última imagen que lo tiene.
+          - { os: ubuntu-24.04, python: "3.9" }
           - { os: macos-latest, python: "3.13" }
           - { os: windows-latest, python: "3.13" }
     steps:
