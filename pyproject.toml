@@ -35,11 +35,11 @@ garita = "garita.cli:main"
 # PyPI sólo dibuja el icono de la barra lateral cuando reconoce la etiqueta.
 # «Repositorio» salía como enlace pelado y sin icono.
 [project.urls]
-Homepage = "https://github.com/proscar87/garita"
-Documentation = "https://github.com/proscar87/garita/blob/main/README.en.md"
-Repository = "https://github.com/proscar87/garita"
-Issues = "https://github.com/proscar87/garita/issues"
-Changelog = "https://github.com/proscar87/garita/releases"
+Homepage = "https://github.com/cinabahq/garita"
+Documentation = "https://github.com/cinabahq/garita/blob/main/README.en.md"
+Repository = "https://github.com/cinabahq/garita"
+Issues = "https://github.com/cinabahq/garita/issues"
+Changelog = "https://github.com/cinabahq/garita/releases"
 
 [tool.setuptools.packages.find]
 where = ["src"]

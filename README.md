@@ -5,12 +5,12 @@ Nombres de tu propio padrón, identificadores oficiales de dieciséis países de
 América y la península ibérica (CURP, RFC, CLABE, CPF, CUIT, RUT, DNI, IBAN…),
 teléfonos y secretos — como hook de `pre-commit` y como GitHub Action.
 
-[![CI](https://github.com/proscar87/garita/actions/workflows/ci.yml/badge.svg)](https://github.com/proscar87/garita/actions/workflows/ci.yml)
-[![MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](https://github.com/proscar87/garita/blob/main/LICENSE)
+[![CI](https://github.com/cinabahq/garita/actions/workflows/ci.yml/badge.svg)](https://github.com/cinabahq/garita/actions/workflows/ci.yml)
+[![MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](https://github.com/cinabahq/garita/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/python-%E2%89%A53.9-blue)
 ![Sin dependencias](https://img.shields.io/badge/dependencias-0-green)
 
-**Español** · [English](https://github.com/proscar87/garita/blob/main/README.en.md)
+**Español** · [English](https://github.com/cinabahq/garita/blob/main/README.en.md)
 
 ---
 
@@ -146,7 +146,7 @@ Garita emite **un solo hallazgo** que nombra a los dos candidatos, en vez
 de dos veredictos que se contradicen. Si sabes en qué país vive tu dato,
 `paises:` vuelve el veredicto inequívoco.
 
-**[`docs/AGREGAR_PAIS.md`](https://github.com/proscar87/garita/blob/main/docs/AGREGAR_PAIS.md) explica cómo agregar el
+**[`docs/AGREGAR_PAIS.md`](https://github.com/cinabahq/garita/blob/main/docs/AGREGAR_PAIS.md) explica cómo agregar el
 tuyo.** La única regla dura: sólo se acepta un identificador si su validación
 se puede verificar contra una fuente oficial. Un detector que sólo mira la
 forma produce ruido, y el ruido es lo que enseña a la gente a ignorar al
@@ -161,7 +161,7 @@ guardián.
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/proscar87/garita
+  - repo: https://github.com/cinabahq/garita
     rev: v1.1.0
     hooks:
       - id: garita
@@ -188,7 +188,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: proscar87/garita@v1
+      - uses: cinabahq/garita@v1
 ```
 
 Es lo que nadie puede saltarse con `--no-verify`. Las dos capas se
@@ -484,9 +484,9 @@ nadie la busca.
 
 ## Documentación
 
-- [`docs/IDENTIFICADORES.md`](https://github.com/proscar87/garita/blob/main/docs/IDENTIFICADORES.md) — los algoritmos, sus
+- [`docs/IDENTIFICADORES.md`](https://github.com/cinabahq/garita/blob/main/docs/IDENTIFICADORES.md) — los algoritmos, sus
   fuentes oficiales y los vectores de prueba
-- [`docs/DISENO.md`](https://github.com/proscar87/garita/blob/main/docs/DISENO.md) — por qué cada decisión, incluidas las que
+- [`docs/DISENO.md`](https://github.com/cinabahq/garita/blob/main/docs/DISENO.md) — por qué cada decisión, incluidas las que
   parecen raras
 
 ---

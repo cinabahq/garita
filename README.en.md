@@ -1,6 +1,6 @@
 # Garita
 
-[Español](https://github.com/proscar87/garita/blob/main/README.md) · **English**
+[Español](https://github.com/cinabahq/garita/blob/main/README.md) · **English**
 
 **Keeps personal data and credentials out of your repository.** Names from
 your own records, official IDs from 16 countries across the Americas and the
@@ -55,7 +55,7 @@ wolf gets ignored. With checksum validation, false positives drop by 90× to
 ```yaml
 # .pre-commit-config.yaml — start here
 repos:
-  - repo: https://github.com/proscar87/garita
+  - repo: https://github.com/cinabahq/garita
     rev: v1.1.0
     hooks:
       - id: garita
@@ -64,7 +64,7 @@ repos:
 ```yaml
 # .github/workflows/garita.yml — the backstop
 - uses: actions/checkout@v4
-- uses: proscar87/garita@v1
+- uses: cinabahq/garita@v1
 ```
 
 Hook first: if your only check is in CI, by the time it fails the data already
@@ -92,7 +92,7 @@ one needs a written `motivo` (reason), and Garita refuses to run without it.
 reason left blank for you to fill in.
 
 Config, findings format and design rationale: see the
-[Spanish README](https://github.com/proscar87/garita/blob/main/README.md) and [`docs/DISENO.md`](https://github.com/proscar87/garita/blob/main/docs/DISENO.md). Built with
+[Spanish README](https://github.com/cinabahq/garita/blob/main/README.md) and [`docs/DISENO.md`](https://github.com/cinabahq/garita/blob/main/docs/DISENO.md). Built with
 [Claude Code](https://claude.com/claude-code). MIT.
 
 ## Garita as a Secret Protection replacement
