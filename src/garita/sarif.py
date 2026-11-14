@@ -114,7 +114,7 @@ def generar(res: Resultado, detectores, conocidos=(), cfg=None) -> dict:
                 "driver": {
                     "name": "Garita",
                     "version": __version__,
-                    "informationUri": "https://github.com/proscar87/garita",
+                    "informationUri": "https://github.com/cinabahq/garita",
                     "rules": [
                         {
                             "id": nombre,
@@ -297,7 +297,7 @@ def generar_historial(res, detectores) -> dict:
                 "driver": {
                     "name": "Garita (historial)",
                     "version": __version__,
-                    "informationUri": "https://github.com/proscar87/garita",
+                    "informationUri": "https://github.com/cinabahq/garita",
                     "rules": [
                         {"id": nombre,
                          "shortDescription": {"text": descripcion or nombre}}
