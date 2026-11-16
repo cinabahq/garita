@@ -178,6 +178,33 @@ def archivos_versionados(raiz: Path) -> list[str]:
     return [f for f in salida.split("\0") if f]
 
 
+# Más de tres entradas con el mismo motivo merecen revisión humana.
+UMBRAL_MOTIVO_REPETIDO = 3
+
+
+def versionados_ignorados(raiz: Path) -> list[str]:
+    """Contrasta el índice completo con las exclusiones, incluso con lista explícita.
+
+    Sin --no-index git omite precisamente los archivos añadidos a la fuerza.
+    Un fallo de git no debe inventar un aviso sobre el despliegue.
+    """
+    try:
+        archivos = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=raiz,
+            capture_output=True, check=True).stdout
+        if not archivos:
+            return []
+        salida = subprocess.run(
+            ["git", "check-ignore", "--no-index", "--stdin", "-z"],
+            cwd=raiz, input=archivos, capture_output=True)
+        # 1 significa que no hubo coincidencias; cualquier otro fallo se calla.
+        if salida.returncode != 0:
+            return []
+        return [r for r in salida.stdout.decode("utf-8", "replace").split("\0") if r]
+    except (OSError, subprocess.CalledProcessError):
+        return []
+
+
 def ruta_revisable(ruta: Path) -> tuple[bool, str]:
     """La parte de `es_revisable` que se decide con el puro nombre.
 
@@ -513,6 +540,10 @@ class Resultado:
     """Los que se saltaron por tamaño, CON su motivo. Se reportan siempre:
     callarlos convierte la revisión en una promesa vacía."""
     exentos_aplicados: dict[str, int] = field(default_factory=dict)
+    versionados_ignorados: list[str] = field(default_factory=list)
+    """Archivos rastreados que las exclusiones de git pueden dejar fuera del deploy."""
+    motivos_repetidos: list[tuple[str, int]] = field(default_factory=list)
+    """Motivo normalizado y número de entradas separadas que lo comparten."""
     exenciones_muertas: list[str] = field(default_factory=list)
     """Exenciones cuyo patrón no coincidió con ningún archivo revisado."""
     archivos_por_exencion: dict[str, int] = field(default_factory=dict)
@@ -641,6 +672,14 @@ def revisar(
     dets = [d for d in detectores if d.activo]
     exen = list(exenciones)
     res = Resultado(enumerado=archivos is None)
+    res.versionados_ignorados = versionados_ignorados(raiz)
+    motivos: dict[str, int] = {}
+    for exencion in exen:
+        # La capitalización no aporta una justificación distinta; sí las palabras.
+        motivo = " ".join(exencion.motivo.split()).casefold()
+        motivos[motivo] = motivos.get(motivo, 0) + 1
+    res.motivos_repetidos = [(m, n) for m, n in motivos.items()
+                             if n > UMBRAL_MOTIVO_REPETIDO]
     patrones_vistos: set[str] = set()
 
     for rel in (archivos if archivos is not None else archivos_versionados(raiz)):
