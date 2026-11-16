@@ -4543,3 +4543,108 @@ _instalar_pruebas_cobertura()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class AvisosDelIncidente(unittest.TestCase):
+    def test_versionado_ignorado_se_nombra_sin_bloquear(self):
+        with repo_temporal({'.gitignore': '*credentials*\n',
+                            'app/credentials_loader.py': 'print(1)\n',
+                            'credentials_local.txt': 'local\n'}) as td:
+            raiz = Path(td)
+            subprocess.run(['git', 'add', '-f', 'app/credentials_loader.py'],
+                           cwd=raiz, check=True)
+            (raiz / '.garita.yml').write_text('fallar_en_aviso: true\n', encoding='utf-8')
+            codigo, salida = correr_garita(raiz)
+            self.assertEqual(codigo, 0, salida)
+            self.assertIn('AVISO', salida)
+            self.assertIn('app/credentials_loader.py', salida)
+            self.assertNotIn('credentials_local.txt', salida)
+            res = revisar(raiz, [])
+            self.assertEqual(res.versionados_ignorados,
+                             ['app/credentials_loader.py'])
+            from garita.reporte_html import generar
+            from garita.sarif import generar as generar_sarif
+            self.assertIn('app/credentials_loader.py', generar(res, str(raiz), 'hoy'))
+            self.assertIn('app/credentials_loader.py',
+                          json.dumps(generar_sarif(res, [])))
+
+    def test_ignorados_sin_rastrear_no_avisan(self):
+        with repo_temporal({'.gitignore': '*credentials*\n',
+                            'credentials_local.txt': 'local\n'}) as td:
+            _, salida = correr_garita(Path(td))
+            self.assertNotIn('AVISO', salida)
+
+    def test_fuera_de_git_y_fallo_de_git_no_avisan(self):
+        with TemporaryDirectory() as td:
+            res = revisar(Path(td), [], archivos=[])
+            self.assertEqual(getattr(res, 'versionados_ignorados', []), [])
+            with unittest.mock.patch('garita.nucleo.subprocess.run',
+                                     side_effect=OSError('git no disponible')):
+                res = revisar(Path(td), [], archivos=[])
+            self.assertEqual(getattr(res, 'versionados_ignorados', []), [])
+            with unittest.mock.patch('garita.nucleo.subprocess.run', return_value=
+                                     subprocess.CompletedProcess([], 128, b'', b'fallo')):
+                res = revisar(Path(td), [], archivos=[])
+            self.assertEqual(getattr(res, 'versionados_ignorados', []), [])
+
+    def test_propuesta_con_caracteres_especiales_vuelve_a_leerse(self):
+        rutas = ['datos # uno.txt', 'datos"dos.txt', "datos'tres.txt",
+                 'datos: cuatro.txt', 'datos cinco.txt', 'sub/" # seis.txt']
+        with repo_temporal({r: 'CLABE 002180000645829179\n' for r in rutas}) as td:
+            raiz = Path(td)
+            _, bloque = correr_garita(raiz, '--proponer-exenciones')
+            (raiz / '.garita.yml').write_text(
+                bloque.replace('    motivo:\n', '    motivo: vector público\n'),
+                encoding='utf-8')
+            cfg = cargar_config(raiz)
+            self.assertEqual(sorted(e.patron for e in cfg.exenciones),
+                             sorted(r if '/' in r else '/' + r for r in rutas))
+
+    def _motivos(self, motivos, patron=None):
+        with repo_temporal({'limpio.txt': 'hola\n'}) as td:
+            exenciones = [Exencion(patron or f'archivo{i}.txt', motivo, ())
+                          for i, motivo in enumerate(motivos)]
+            return revisar(Path(td), [], exenciones=exenciones)
+
+    def test_cuatro_exenciones_comparten_motivo_normalizado(self):
+        res = self._motivos(['  Vector público ', 'Vector   público',
+                             'VECTOR público', 'Vector público'])
+        from garita.reporte import imprimir
+        salida = io.StringIO()
+        imprimir(res, salida=salida, sin_color=True)
+        self.assertIn('4 exenciones comparten motivo', salida.getvalue())
+        self.assertIn('vector público', salida.getvalue())
+        from garita.reporte_html import generar
+        from garita.reporte import resumen_markdown
+        from garita.sarif import generar as generar_sarif
+        self.assertIn('4 exenciones comparten motivo', generar(res, '.', 'hoy'))
+        self.assertIn('4 exenciones comparten motivo', resumen_markdown(res))
+        documento = generar_sarif(res, [])
+        alertas = [r for r in documento['runs'][0]['results']
+                   if 'comparten motivo' in r['message']['text']]
+        self.assertEqual(len(alertas), 1)
+        self.assertEqual(alertas[0]['level'], 'warning')
+
+    def test_tres_exenciones_no_avisan_por_motivo(self):
+        res = self._motivos(['vector público'] * 3)
+        self.assertFalse(getattr(res, 'motivos_repetidos', []))
+
+    def test_una_exencion_amplia_no_cuenta_archivos(self):
+        with repo_temporal({f'tests/vectores/{i}.txt': 'hola' for i in range(50)}) as td:
+            res = revisar(Path(td), [], [Exencion('tests/vectores/**', 'vector público', ())])
+        self.assertFalse(getattr(res, 'motivos_repetidos', []))
+
+    def test_motivos_distintos_no_avisan(self):
+        res = self._motivos([f'vector público {i}' for i in range(4)])
+        self.assertFalse(getattr(res, 'motivos_repetidos', []))
+
+
+class BooleanoEntreComillas(unittest.TestCase):
+    """«"false"» se leía como falso; leerlo como cadena volteaba la opción."""
+
+    def test_comillas_no_cambian_el_booleano(self):
+        from garita.config import _valor
+        self.assertIs(_valor('"false"'), False)
+        self.assertIs(_valor("'off'"), False)
+        self.assertIs(_valor('"true"'), True)
+        self.assertEqual(_valor("'a''b #c'"), "a'b #c")

@@ -81,15 +81,19 @@ class Config:
 # Cualquier cosa fuera de eso se rechaza con un mensaje que dice qué línea y
 # qué se esperaba. Fallar claro es mejor que interpretar de más.
 
-_COMENTARIO = re.compile(r"(?<!\S)#.*$")
-
-
 class ConfigInvalida(Exception):
     pass
 
 
 def _valor(bruto: str):
-    v = bruto.strip().strip('"').strip("'")
+    v = bruto.strip()
+    # Entre comillas simples, YAML escribe la comilla interna doblada ('').
+    # Después sigue el mismo camino de siempre: «"false"» sigue siendo falso,
+    # como lo leía Garita antes; volverlo cadena voltearía la opción.
+    if len(v) >= 2 and v[0] == v[-1] == "'":
+        v = v[1:-1].replace("''", "'")
+    else:
+        v = v.strip('"').strip("'")
     # Las colecciones vacías en línea. Sin esto, «exenciones: []» quedaba como
     # la CADENA "[]" y el validador la rechazaba con «cada exención necesita
     # archivo y motivo» — sobre una lista que no tiene exenciones. Un repo que
@@ -108,12 +112,35 @@ def _valor(bruto: str):
     return v
 
 
+def _sin_comentario(linea: str) -> str:
+    """El # sólo abre comentario fuera de un escalar entre comillas."""
+    comilla = None
+    i = 0
+    while i < len(linea):
+        c = linea[i]
+        if comilla:
+            if c == "\\" and comilla == '"':
+                i += 2
+                continue
+            if c == comilla:
+                if comilla == "'" and linea[i:i + 2] == "''":
+                    i += 2
+                    continue
+                comilla = None
+        elif c in ("'", '"') and re.search(r"(?:^|:\s*|-\s*)$", linea[:i]):
+            comilla = c
+        elif c == "#" and (i == 0 or linea[i - 1].isspace()):
+            return linea[:i]
+        i += 1
+    return linea
+
+
 def _leer_yaml(texto: str) -> dict:
     raiz: dict = {}
     pila: list[tuple[int, object]] = [(-1, raiz)]
 
     for n, cruda in enumerate(texto.splitlines(), 1):
-        linea = _COMENTARIO.sub("", cruda).rstrip()
+        linea = _sin_comentario(cruda).rstrip()
         if not linea.strip():
             continue
         sangria = len(linea) - len(linea.lstrip())

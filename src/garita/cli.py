@@ -616,6 +616,9 @@ def _proponer_exenciones(res, raiz: Path) -> int:
         # hoy o el día que alguien lo agregue. Lo que la herramienta propone
         # nunca puede exentar más de lo que encontró.
         patron = archivo if "/" in archivo else f"/{archivo}"
+        # Las comillas simples de YAML duplican las internas y conservan # y :.
+        if any(c in patron for c in "#\"': "):
+            patron = "'" + patron.replace("'", "''") + "'"
         print(f"  - archivo: {patron}")
         print(f"    motivo:")
         print(f"    detectores: {dets}")

@@ -199,7 +199,7 @@ def _seccion_reservas(res, cfg=None) -> str:
     coartada.
     """
     from .reporte import (escaneo_ausente, exenciones_que_apagan,
-                          recortes_de_configuracion)
+                          recortes_de_configuracion, avisos_del_incidente)
 
     bloques = []
     # Primero, porque le quita el piso a todo lo demás del documento: si no
@@ -231,6 +231,8 @@ def _seccion_reservas(res, cfg=None) -> str:
             f'<ul style="padding-left:20px" class="gris">{filas}</ul>'
             f'<p class="suave">El archivo se renombró o se borró. Si se '
             f"renombró, lleva revisándose sin exención desde entonces.</p>")
+    for _, aviso in avisos_del_incidente(res):
+        bloques.append(f'<p class="gris">{_E(aviso)}</p>')
     if not bloques:
         return ""
     return (f'<section class="tarjeta"><h2>Reservas sobre este veredicto</h2>'
