@@ -4591,8 +4591,9 @@ class AvisosDelIncidente(unittest.TestCase):
         rutas = ['datos # uno.txt', 'datos"dos.txt', "datos'tres.txt",
                  'datos: cuatro.txt', 'datos cinco.txt', 'sub/" # seis.txt']
         if os.name == 'nt':
-            # Windows no admite " en un nombre de archivo: ahí no hay qué proponer.
-            rutas = [r for r in rutas if '"' not in r]
+            # Windows no admite " ni : en un nombre de archivo (el : abre un
+            # flujo alterno de NTFS): ahí no hay qué proponer.
+            rutas = [r for r in rutas if '"' not in r and ':' not in r]
         with repo_temporal({r: 'CLABE 002180000645829179\n' for r in rutas}) as td:
             raiz = Path(td)
             _, bloque = correr_garita(raiz, '--proponer-exenciones')
