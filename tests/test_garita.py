@@ -4590,6 +4590,9 @@ class AvisosDelIncidente(unittest.TestCase):
     def test_propuesta_con_caracteres_especiales_vuelve_a_leerse(self):
         rutas = ['datos # uno.txt', 'datos"dos.txt', "datos'tres.txt",
                  'datos: cuatro.txt', 'datos cinco.txt', 'sub/" # seis.txt']
+        if os.name == 'nt':
+            # Windows no admite " en un nombre de archivo: ahí no hay qué proponer.
+            rutas = [r for r in rutas if '"' not in r]
         with repo_temporal({r: 'CLABE 002180000645829179\n' for r in rutas}) as td:
             raiz = Path(td)
             _, bloque = correr_garita(raiz, '--proponer-exenciones')
