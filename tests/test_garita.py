@@ -4652,3 +4652,63 @@ class BooleanoEntreComillas(unittest.TestCase):
         self.assertIs(_valor("'off'"), False)
         self.assertIs(_valor('"true"'), True)
         self.assertEqual(_valor("'a''b #c'"), "a'b #c")
+
+
+class LaPropuestaNombraLaRutaLiteral(unittest.TestCase):
+    """`casa_ruta` lee «[», «*» y «?» como comodines, y la propuesta emitía
+    la ruta tal cual: «app/[id]/conf.env» —la ruta dinámica de Next.js—
+    casaba «app/i/conf.env» y NO casaba el archivo que la motivó. Pegada,
+    exentaba a un vecino en silencio y no salía como exención muerta."""
+
+    CLABE = "CLABE 002180000645829179\n"
+
+    def test_los_corchetes_exentan_su_archivo_y_no_al_vecino(self):
+        # De punta a punta: se pega lo propuesto para las dos rutas con
+        # corchetes y el vecino que el patrón crudo absorbía sigue sonando.
+        with repo_temporal({"app/[id]/conf.env": self.CLABE,
+                            "app/i/conf.env": self.CLABE,
+                            "raiz[1].env": self.CLABE}) as td:
+            raiz = Path(td)
+            codigo, bloque = correr_garita(raiz, "--proponer-exenciones")
+            self.assertEqual(codigo, 0, bloque)
+            entradas = bloque.split("  - archivo: ")
+            pegado = entradas[0] + "".join(
+                "  - archivo: " + e for e in entradas[1:]
+                if not e.startswith("app/i/"))
+            self.assertEqual(pegado.count("- archivo:"), 2, bloque)
+            (raiz / ".garita.yml").write_text(
+                pegado.replace("    motivo:\n",
+                               "    motivo: vector del catálogo público\n"),
+                encoding="utf-8")
+            subprocess.run(["git", "add", "-A"], cwd=raiz, check=True)
+            codigo, salida = correr_garita(raiz)
+        self.assertEqual(codigo, 1, salida)
+        self.assertIn("app/i/conf.env", salida)
+        self.assertNotIn("app/[id]/conf.env", salida)
+        self.assertNotIn("raiz[1].env", salida)
+        self.assertNotIn("no aplicaron", salida)
+
+    def test_asterisco_e_interrogacion_tambien_son_literales(self):
+        # Sin tocar el disco: Windows no admite «*» ni «?» en un nombre.
+        from types import SimpleNamespace
+        from garita.cli import _proponer_exenciones
+        from garita.nucleo import casa_ruta
+        rutas = ["datos*.txt", "sub/a?b.txt", "x/[a-z]*/y.txt"]
+        res = SimpleNamespace(hallazgos=[
+            SimpleNamespace(archivo=r, detector="clabe") for r in rutas])
+        with TemporaryDirectory() as td:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                _proponer_exenciones(res, Path(td))
+            (Path(td) / ".garita.yml").write_text(
+                buf.getvalue().replace("    motivo:\n", "    motivo: vector\n"),
+                encoding="utf-8")
+            patrones = sorted(e.patron for e in cargar_config(Path(td)).exenciones)
+        self.assertEqual(len(patrones), 3)
+        for ruta, vecino in (("datos*.txt", "datos2026.txt"),
+                             ("sub/a?b.txt", "sub/aXb.txt"),
+                             ("x/[a-z]*/y.txt", "x/abc/y.txt")):
+            casan = [p for p in patrones if casa_ruta(ruta, p)]
+            self.assertEqual(len(casan), 1, (ruta, patrones))
+            self.assertFalse(casa_ruta(vecino, casan[0]), (vecino, casan[0]))
+
