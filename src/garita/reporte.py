@@ -62,6 +62,13 @@ def recortes_de_configuracion(cfg) -> list[str]:
     if paises:
         fuera.append("sólo se cargaron los identificadores de: "
                      + ", ".join(paises))
+    # Lo contrario de un recorte, y por eso mismo va aquí: una clave que
+    # Garita no conoce es una orden que alguien cree haber dado y que no se
+    # cumplió. «fallar_en_avisos: true» aprobaba con 0 sin decir palabra.
+    desconocidas = getattr(cfg, "claves_desconocidas", None)
+    if desconocidas:
+        fuera.append("claves de .garita.yml que Garita no conoce y no "
+                     "obedeció: " + ", ".join(desconocidas))
     return fuera
 
 
