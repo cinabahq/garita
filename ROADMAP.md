@@ -370,6 +370,22 @@ repetía.
   encabezado de un CSV va en la línea de arriba y `exige_contexto` pide la
   palabra en la MISMA línea.
 
+### Lo que encontró la relectura del 2026-11-16
+
+Dos defectos reproducidos antes de tocarlos y medidos contra las quince
+configuraciones reales; ninguna cambia de veredicto.
+
+- [x] **La propuesta de `--proponer-exenciones` no era literal** —
+  `cli.py`, *alta*. `casa_ruta` lee «[», «*» y «?» como comodines y la
+  propuesta emitía la ruta tal cual: `app/[id]/conf.env` casa
+  `app/i/conf.env` y NO casa su propio archivo. Pegada, exentaba en
+  silencio a un vecino, dejaba el hallazgo en pie y no salía como exención
+  muerta. Medido: **239 rutas rastreadas** con corchetes en tres
+  consumidores (213 en `cinaba-platform`, rutas dinámicas de Next.js) y
+  **ninguna** se casaba a sí misma; escapadas (`[[]`, `[*]`, `[?]`), las
+  239 casan su archivo y sólo ése. `casa_ruta` no se toca: hay
+  configuraciones que usan clases de caracteres a propósito.
+
 ---
 
 ## 4. Decisión pendiente del usuario

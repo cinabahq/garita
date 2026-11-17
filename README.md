@@ -436,6 +436,12 @@ igual. Y una **barra inicial ancla a la raíz**: `/config.json` es el de la
 raíz y sólo ése, mientras que `config.json` cubriría además el de cualquier
 subcarpeta. Por eso `--proponer-exenciones` lo emite anclado.
 
+**Los corchetes también son comodines.** `[id]` casa UNA letra —la «i» o la
+«d»—, así que `app/[id]/page.tsx`, la ruta dinámica de Next.js, escrita tal
+cual no casa su propio archivo y sí casaría `app/i/page.tsx`. El carácter
+literal se escribe en su propia clase: `'app/[[]id]/page.tsx'` (y `[*]`,
+`[?]`). `--proponer-exenciones` ya lo emite así.
+
 ---
 
 ## Cómo se ve un hallazgo
