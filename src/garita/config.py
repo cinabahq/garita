@@ -25,6 +25,7 @@ específica del proyecto.
 """
 from __future__ import annotations
 
+import difflib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,6 +34,18 @@ from .nucleo import Exencion
 
 
 NOMBRE_ARCHIVO = ".garita.yml"
+
+CLAVES = ("nombres", "clientes", "paises", "detectores", "exenciones",
+          "fallar_en_aviso")
+"""Las claves de primer nivel que `cargar` obedece. Ni una más."""
+
+CLAVES_DE_EXENCION = ("archivo", "motivo", "detectores")
+
+
+def _parecida(clave: str, conocidas) -> str:
+    """« (¿quisiste decir «x»?)» si la clave se parece a una conocida."""
+    cerca = difflib.get_close_matches(clave.lower(), conocidas, n=1, cutoff=0.7)
+    return f" (¿quisiste decir «{cerca[0]}»?)" if cerca else ""
 
 
 @dataclass
@@ -63,6 +76,17 @@ class Config:
     """Por omisión los avisos no rompen el build. Quien quiera tolerancia
     cero lo enciende, pero no se le impone: un guardián que rompe el build
     por algo dudoso enseña a la gente a saltárselo."""
+
+    claves_desconocidas: list[str] = field(default_factory=list)
+    """Claves de primer nivel que Garita no conoce y por lo tanto NO obedeció,
+    cada una con su sugerencia si se parece a una que sí existe.
+
+    `cargar` las leía con `datos.get` y lo demás se caía sin rastro: con
+    «fallar_en_avisos: true» —una «s» de más— el build que pidió tolerancia
+    cero seguía saliendo con 0. No es error porque hay configuraciones
+    reales con claves de más que no dañan (se midieron dos con «version: 1»)
+    y reprobarlas con 2 al mover el tag rompería a quien no cambió nada;
+    pero se DICE, en los cuatro canales, por `recortes_de_configuracion`."""
 
     def activo(self, detector: str) -> bool:
         return self.detectores.get(detector, True)
@@ -296,6 +320,21 @@ def cargar(raiz: Path, nombre: str = NOMBRE_ARCHIVO) -> Config:
         # pegar y olvidar. Tres espacios no son una razón.
         archivo = str(e.get("archivo") or "").strip()
         motivo = str(e.get("motivo") or "").strip()
+        # Una clave que no existe dentro de una exención se RECHAZA, por la
+        # misma razón que «detectores: []» más abajo: «detector: clabe» —en
+        # singular— se ignoraba, la exención quedaba sin acotar y exentaba
+        # el archivo de TODOS los detectores, llave privada incluida, con
+        # código 0 y sin salir como exención muerta. Aquí la clave ignorada
+        # no revisa de más: revisa de menos, y eso no se deja en aviso.
+        for clave in e:
+            if clave not in CLAVES_DE_EXENCION:
+                raise ConfigInvalida(
+                    f"la exención de «{archivo or '?'}» trae la clave "
+                    f"«{clave}», que Garita no conoce"
+                    f"{_parecida(clave, CLAVES_DE_EXENCION)}. Una exención "
+                    f"sólo lleva «archivo», «motivo» y «detectores»; "
+                    f"ignorarla la dejaría más ancha de lo que dice."
+                )
         if not archivo or not motivo:
             raise ConfigInvalida(
                 f"la exención de «{archivo or '?'}» no tiene motivo. El motivo "
@@ -346,4 +385,6 @@ def cargar(raiz: Path, nombre: str = NOMBRE_ARCHIVO) -> Config:
         detectores={k: bool(v) for k, v in _a_mapa(datos.get("detectores", [])).items()},
         exenciones=exenciones,
         fallar_en_aviso=bool(datos.get("fallar_en_aviso", False)),
+        claves_desconocidas=[f"«{k}»{_parecida(k, CLAVES)}"
+                             for k in datos if k not in CLAVES],
     )
