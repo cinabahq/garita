@@ -115,6 +115,18 @@ def exenciones_que_apagan(res) -> list[str]:
             for patron, n in sorted(cobertura.items()) if n >= revisados]
 
 
+def avisos_del_incidente(res) -> list[tuple[str, str]]:
+    """Reservas informativas compartidas por todos los canales, sin bloquear."""
+    avisos = [(archivo, f"AVISO: {archivo} está versionado pero las exclusiones "
+               "de git lo ignoran; herramientas de deploy pueden omitirlo.")
+              for archivo in getattr(res, "versionados_ignorados", ())]
+    for motivo, cantidad in getattr(res, "motivos_repetidos", ()):
+        recortado = motivo[:120] + ("…" if len(motivo) > 120 else "")
+        avisos.append((".garita.yml", f"AVISO: {cantidad} exenciones comparten "
+                       f"motivo: «{recortado}». Revisa la justificación de cada entrada."))
+    return avisos
+
+
 def _ruta(v: str) -> str:
     """Bajo Actions, stdout es un canal de comandos, no sólo texto.
 
@@ -181,6 +193,9 @@ def imprimir(res: Resultado, salida=None, base=None,
                   file=salida)
         print(n("  Garita no puede decir que están limpios: no los miró. "
                 "Arregla el acceso y vuelve a correr.", "gris"), file=salida)
+
+    for _, aviso in avisos_del_incidente(res):
+        print(n(aviso, "amarillo"), file=salida)
 
     if res.exenciones_muertas:
         print(file=salida)
@@ -389,7 +404,7 @@ def resumen_markdown(res: Resultado, base=None, nuevos=None,
     # un archivo que nadie leyó es la marca verde sin revisión. Hasta aquí
     # esto sólo salía en la terminal, y quien mira el panel del job —o el
     # SARIF de la auditoría mensual— creía que se había revisado todo.
-    reservas = []
+    reservas = [aviso for _, aviso in avisos_del_incidente(res)]
     if getattr(res, "ilegibles", None):
         reservas.append(
             f"**{len(res.ilegibles)} archivo"

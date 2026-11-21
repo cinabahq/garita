@@ -100,6 +100,10 @@ def generar(res: Resultado, detectores, conocidos=(), cfg=None) -> dict:
     # o sobre un archivo que ni se pudo abrir. Un guardián que calla lo que
     # no miró es el que esta herramienta existe para no ser.
     resultados += _alertas_de_lo_no_revisado(res)
+    from .reporte import avisos_del_incidente
+    resultados += [_alerta_sin_revisar(archivo, "warning", aviso,
+                                      huella=f"incidente:{archivo}:{aviso}")
+                   for archivo, aviso in avisos_del_incidente(res)]
     resultados += alertas_de_configuracion(cfg)
     resultados += alertas_de_exenciones_que_apagan(res)
     resultados += alertas_de_escaneo_ausente(res)
