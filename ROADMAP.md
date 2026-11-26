@@ -372,6 +372,40 @@ repetía.
   encabezado de un CSV va en la línea de arriba y `exige_contexto` pide la
   palabra en la MISMA línea.
 
+### Lo que encontró la relectura del 2026-11-16
+
+Dos defectos reproducidos antes de tocarlos y medidos contra las quince
+configuraciones reales; ninguna cambia de veredicto.
+
+- [x] **La propuesta de `--proponer-exenciones` no era literal** —
+  `cli.py`, *alta*. `casa_ruta` lee «[», «*» y «?» como comodines y la
+  propuesta emitía la ruta tal cual: `app/[id]/conf.env` casa
+  `app/i/conf.env` y NO casa su propio archivo. Pegada, exentaba en
+  silencio a un vecino, dejaba el hallazgo en pie y no salía como exención
+  muerta. Medido: **239 rutas rastreadas** con corchetes en tres
+  consumidores (213 en `cinaba-platform`, rutas dinámicas de Next.js) y
+  **ninguna** se casaba a sí misma; escapadas (`[[]`, `[*]`, `[?]`), las
+  239 casan su archivo y sólo ése. `casa_ruta` no se toca: hay
+  configuraciones que usan clases de caracteres a propósito.
+- [x] **Una clave mal escrita se ignoraba sin rastro** — `config.py`,
+  *alta* dentro de una exención. `detector: clabe` —en singular— dejaba la
+  exención sin acotar: tapaba la llave privada del mismo archivo con
+  código 0. Ahora es código 2, igual que `detectores: []`. En el primer
+  nivel (`fallar_en_avisos: true` aprobaba con 0 el build que pidió
+  tolerancia cero) es **aviso**, no error, y sale por
+  `recortes_de_configuracion` en los cuatro canales: `velador` y `sabueso`
+  traen `version: 1`, que no hace nada, y reprobarlos al mover el tag
+  rompería a quien no cambió nada. Decidir si `version` se reserva o se
+  borra de esos dos repos queda para el usuario.
+- [ ] **El aviso de «versionado que git ignora» depende de la máquina.**
+  `git check-ignore` también lee `~/.config/git/ignore` y
+  `.git/info/exclude`, que no viajan con el repositorio. Medido: dispara
+  en 4 de 15 repos, y en 3 (`mifo`, `mifo-ipad`, `mifo-menu`) sólo por la
+  exclusión GLOBAL de quien corre; en CI no saldría. El cuarto
+  (`coto-orquideas`, `web/.env.example` bajo `.env*`) es legítimo. Sin
+  receta aprobada: filtrar por origen con `-v` lo vuelve reproducible,
+  pero hay herramientas de deploy que sí leen la exclusión global.
+
 ---
 
 ## 4. Decisión pendiente del usuario

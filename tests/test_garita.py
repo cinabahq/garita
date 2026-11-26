@@ -4652,3 +4652,130 @@ class BooleanoEntreComillas(unittest.TestCase):
         self.assertIs(_valor("'off'"), False)
         self.assertIs(_valor('"true"'), True)
         self.assertEqual(_valor("'a''b #c'"), "a'b #c")
+
+
+class LaPropuestaNombraLaRutaLiteral(unittest.TestCase):
+    """`casa_ruta` lee «[», «*» y «?» como comodines, y la propuesta emitía
+    la ruta tal cual: «app/[id]/conf.env» —la ruta dinámica de Next.js—
+    casaba «app/i/conf.env» y NO casaba el archivo que la motivó. Pegada,
+    exentaba a un vecino en silencio y no salía como exención muerta."""
+
+    CLABE = "CLABE 002180000645829179\n"
+
+    def test_los_corchetes_exentan_su_archivo_y_no_al_vecino(self):
+        # De punta a punta: se pega lo propuesto para las dos rutas con
+        # corchetes y el vecino que el patrón crudo absorbía sigue sonando.
+        with repo_temporal({"app/[id]/conf.env": self.CLABE,
+                            "app/i/conf.env": self.CLABE,
+                            "raiz[1].env": self.CLABE}) as td:
+            raiz = Path(td)
+            codigo, bloque = correr_garita(raiz, "--proponer-exenciones")
+            self.assertEqual(codigo, 0, bloque)
+            entradas = bloque.split("  - archivo: ")
+            pegado = entradas[0] + "".join(
+                "  - archivo: " + e for e in entradas[1:]
+                if not e.startswith("app/i/"))
+            self.assertEqual(pegado.count("- archivo:"), 2, bloque)
+            (raiz / ".garita.yml").write_text(
+                pegado.replace("    motivo:\n",
+                               "    motivo: vector del catálogo público\n"),
+                encoding="utf-8")
+            subprocess.run(["git", "add", "-A"], cwd=raiz, check=True)
+            codigo, salida = correr_garita(raiz)
+        self.assertEqual(codigo, 1, salida)
+        self.assertIn("app/i/conf.env", salida)
+        self.assertNotIn("app/[id]/conf.env", salida)
+        self.assertNotIn("raiz[1].env", salida)
+        self.assertNotIn("no aplicaron", salida)
+
+    def test_asterisco_e_interrogacion_tambien_son_literales(self):
+        # Sin tocar el disco: Windows no admite «*» ni «?» en un nombre.
+        from types import SimpleNamespace
+        from garita.cli import _proponer_exenciones
+        from garita.nucleo import casa_ruta
+        rutas = ["datos*.txt", "sub/a?b.txt", "x/[a-z]*/y.txt"]
+        res = SimpleNamespace(hallazgos=[
+            SimpleNamespace(archivo=r, detector="clabe") for r in rutas])
+        with TemporaryDirectory() as td:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                _proponer_exenciones(res, Path(td))
+            (Path(td) / ".garita.yml").write_text(
+                buf.getvalue().replace("    motivo:\n", "    motivo: vector\n"),
+                encoding="utf-8")
+            patrones = sorted(e.patron for e in cargar_config(Path(td)).exenciones)
+        self.assertEqual(len(patrones), 3)
+        for ruta, vecino in (("datos*.txt", "datos2026.txt"),
+                             ("sub/a?b.txt", "sub/aXb.txt"),
+                             ("x/[a-z]*/y.txt", "x/abc/y.txt")):
+            casan = [p for p in patrones if casa_ruta(ruta, p)]
+            self.assertEqual(len(casan), 1, (ruta, patrones))
+            self.assertFalse(casa_ruta(vecino, casan[0]), (vecino, casan[0]))
+
+
+class LaClaveQueGaritaNoConoce(unittest.TestCase):
+    """`cargar` leía con `datos.get` y lo demás se caía sin rastro. Dentro
+    de una exención eso la ENSANCHA: «detector: clabe» dejaba la exención
+    sin acotar y tapaba la llave privada del mismo archivo, con código 0."""
+
+    LLAVE = ("-----BEGIN RSA PRIVATE KEY-----\n"
+             "MIIEowIBAAKCAQEAxK3vN2pQ8mZ1yT4bH7cRfW9uJ0sLdE5gA6nVoXiPqYtBzCkM\n"
+             "h3Uw8eRjFlDgSnOa2vKbTyZx1mQpWcI4oHuE7rNfGtLsAjD9iVbYkCzXwMeP0qRa\n"
+             "-----END RSA PRIVATE KEY-----\n")
+
+    def test_la_llave_suena_con_la_exencion_bien_escrita(self):
+        # El contrapeso: con «detectores» la exención sólo tapa la CLABE.
+        with repo_temporal({
+                "datos.txt": self.LLAVE + "CLABE 002180000645829179\n",
+                ".garita.yml": "exenciones:\n  - archivo: /datos.txt\n"
+                               "    motivo: vector del catálogo\n"
+                               "    detectores: clabe\n"}) as td:
+            codigo, salida = correr_garita(Path(td))
+        self.assertEqual(codigo, 1, salida)
+        self.assertIn("llave_privada", salida)
+
+    def test_detector_en_singular_no_ensancha_la_exencion(self):
+        with repo_temporal({
+                "datos.txt": self.LLAVE + "CLABE 002180000645829179\n",
+                ".garita.yml": "exenciones:\n  - archivo: /datos.txt\n"
+                               "    motivo: vector del catálogo\n"
+                               "    detector: clabe\n"}) as td:
+            codigo, salida = correr_garita(Path(td))
+        self.assertEqual(codigo, 2, salida)
+        self.assertIn("«detector»", salida)
+        self.assertIn("¿quisiste decir «detectores»?", salida)
+
+    def test_la_clave_de_primer_nivel_se_dice_en_los_cuatro_canales(self):
+        from garita.reporte import resumen_markdown
+        from garita.reporte_html import generar as generar_html
+        from garita.sarif import generar as generar_sarif
+        with repo_temporal({
+                "x.py": "x = 1\n",
+                ".garita.yml": "fallar_en_avisos: true\nversion: 1\n"}) as td:
+            raiz = Path(td)
+            codigo, salida = correr_garita(raiz)
+            cfg = cargar_config(raiz)
+            res = revisar(raiz, [])
+        # No reprueba: hay configuraciones reales con «version: 1».
+        self.assertEqual(codigo, 0, salida)
+        sarif = json.dumps(generar_sarif(res, [], cfg=cfg), ensure_ascii=False)
+        html = generar_html(res, raiz="r", fecha="2026-11-16", cfg=cfg)
+        for canal in (salida, resumen_markdown(res, cfg=cfg), sarif, html):
+            self.assertIn("no conoce", canal)
+            self.assertIn("fallar_en_avisos", canal)
+            self.assertIn("fallar_en_aviso»?", canal)
+            self.assertIn("version", canal)
+        self.assertEqual(len(cfg.claves_desconocidas), 2)
+
+    def test_las_claves_conocidas_no_se_anuncian(self):
+        with repo_temporal({
+                "x.py": "x = 1\n",
+                ".garita.yml": "paises: mx\nfallar_en_aviso: false\n"
+                               "detectores:\n  - jwt: true\n"
+                               "exenciones: []\n"}) as td:
+            codigo, salida = correr_garita(Path(td))
+            cfg = cargar_config(Path(td))
+        self.assertEqual(codigo, 0, salida)
+        # Contrapeso: pasa también contra el código anterior.
+        self.assertEqual(getattr(cfg, "claves_desconocidas", []), [])
+        self.assertNotIn("no conoce", salida)

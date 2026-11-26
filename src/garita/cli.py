@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -615,9 +616,21 @@ def _proponer_exenciones(res, raiz: Path) -> int:
         # produjo y tapaba en silencio un homónimo de cualquier subcarpeta,
         # hoy o el día que alguien lo agregue. Lo que la herramienta propone
         # nunca puede exentar más de lo que encontró.
-        patron = archivo if "/" in archivo else f"/{archivo}"
-        # Las comillas simples de YAML duplican las internas y conservan # y :.
-        if any(c in patron for c in "#\"': "):
+        #
+        # Y la ruta se propone LITERAL. `casa_ruta` lee «[», «*» y «?» como
+        # comodines, así que la ruta tal cual era otro patrón: el de
+        # «app/[id]/page.tsx» —la ruta dinámica de Next.js— casa
+        # «app/i/page.tsx» y «app/d/page.tsx», y NO casa el archivo que la
+        # motivó. Pegada, exentaba en silencio a un vecino, dejaba el
+        # hallazgo original en pie y ni siquiera salía como exención muerta.
+        # Cada comodín se encierra en su propia clase («[[]», «[*]», «[?]»),
+        # que casa sólo ese carácter — lo mismo que hace `glob.escape`.
+        literal = re.sub(r"([*?\[])", r"[\1]", archivo)
+        patron = literal if "/" in archivo else f"/{literal}"
+        # Las comillas simples de YAML duplican las internas y conservan # y
+        # :. Se entrecomilla todo lo que no sea letra, dígito o separador de
+        # ruta: el patrón escapado puede traer corchetes y asteriscos.
+        if re.search(r"[^\w./-]", patron):
             patron = "'" + patron.replace("'", "''") + "'"
         print(f"  - archivo: {patron}")
         print(f"    motivo:")
