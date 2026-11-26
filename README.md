@@ -162,7 +162,7 @@ guardián.
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/cinabahq/garita
-    rev: v1.1.0
+    rev: v1.2.0
     hooks:
       - id: garita
 ```

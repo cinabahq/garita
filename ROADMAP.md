@@ -197,8 +197,8 @@ medir antes de escribirlas.
   > medido ni tiene receta; no se abre ítem nuevo sin antes correrlo
   > contra un repositorio real, por la misma razón que la nota de arriba.
 
-- [ ] **Un motivo repetido palabra por palabra no es un motivo** —
-  *nuevo, sin detector*. En un repositorio real, treinta exenciones
+- [x] **Un motivo repetido palabra por palabra no es un motivo** —
+  *saldado en **v1.2.0***, como aviso. En un repositorio real, treinta exenciones
   compartían un motivo de línea base copiado en bloque; una de ellas
   cubría un archivo que ligaba propietarios a sus lotes, justo lo que la
   regla del proyecto prohíbe. El motivo boilerplate **silenció lo que no
@@ -239,7 +239,8 @@ congelada**.
   binarios, y reprobar ahí desinstala el hook. Verificado contra el caso
   real de `coto-orquideas`, que corre con `solo-cambios: true`.
 
-- [ ] **Archivos versionados que `.gitignore` excluye.** El patrón
+- [x] **Archivos versionados que `.gitignore` excluye** — *saldado en
+  **v1.2.0***, como aviso. El patrón
   `*credentials*` —correcto como red de seguridad— se estaba tragando
   CÓDIGO que vive en el repo por `git add -f`. Garita los ve; `railway up`
   respeta `.gitignore` y no los subía, así que el build reportaba SUCCESS
@@ -311,8 +312,9 @@ señal a la vez y diferenciando los cuatro canales sobre él.
   (`ENCRYPTED PRIVATE KEY`), que no es el secreto — el secreto es el
   cuerpo, y el cuerpo no se imprime nunca.
 
-- [ ] El bloque de `--proponer-exenciones` no es YAML válido para el propio
-  lector si la ruta lleva `#` — `cli.py:544`. (Falla cerrada.)
+- [x] El bloque de `--proponer-exenciones` no es YAML válido para el propio
+  lector si la ruta lleva `#` — `cli.py:544`. (Falla cerrada.) *Saldado en
+  **v1.2.0**: la ruta va entre comillas.*
 
 ### Los dieciséis países: colisiones — saldado en v0.33.0
 
